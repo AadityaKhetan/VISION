@@ -16,6 +16,25 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".MessageActivity"
+            android:label="Message Inbox">
+
+        </activity>
+
+        <activity
+            android:name=".TimeDateActivity"
+            android:label="Battery Status">
+
+        </activity>
+
+        <activity
+            android:name=".PhoneActivity"
+            android:label="Phone Manager">
+
+        </activity>
+
     </application>
 
 </manifest>

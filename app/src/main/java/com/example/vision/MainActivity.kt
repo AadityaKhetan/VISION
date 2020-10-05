@@ -1,79 +1,101 @@
 package com.example.vision
 
 import android.content.Intent
+
+import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.util.Log
-import android.view.GestureDetector
-import android.view.MotionEvent
+import android.speech.tts.TextToSpeech
+
 import android.view.View
-import android.widget.GridLayout
-import android.widget.RelativeLayout
+
 import android.widget.Toast
-import androidx.core.view.GestureDetectorCompat
+import androidx.annotation.RequiresApi
+
 import kotlinx.android.synthetic.main.activity_main.*
+import java.lang.IllegalArgumentException
+import java.util.*
 
-private const val SIMPLE_GESTURE = "Gestures DETECTEED"
-class MainActivity : AppCompatActivity() {
 
-    private lateinit var myDetector : GestureDetectorCompat
+class MainActivity : AppCompatActivity(), View.OnClickListener,
+    View.OnLongClickListener,
+    TextToSpeech.OnInitListener {
 
+    private var tts: TextToSpeech? = null
+
+    @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        myDetector = GestureDetectorCompat(this,MyGestureListener())
+
+        tts = TextToSpeech(this, this)
+
+        val text = "Welcome to Vision.Single tap for details and long press to open activity."
+        speak(text)
+
+        msgBox.setOnClickListener(this)
+        phoneMngr.setOnClickListener(this)
+        timeDate.setOnClickListener(this)
+        cameraCard.setOnClickListener(this)
+
+        msgBox.setOnLongClickListener(this)
+        phoneMngr.setOnLongClickListener(this)
+        timeDate.setOnLongClickListener(this)
+        cameraCard.setOnLongClickListener(this)
+
 
     }
 
-    override fun onTouchEvent(event: MotionEvent?): Boolean {
-        myDetector.onTouchEvent(event)
-        return super.onTouchEvent(event)
-    }
+    @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
+    override fun onClick(view: View) {
+        val text = when (view.id) {
+            R.id.msgBox -> "You clicked messaging!"
+            R.id.phoneMngr -> "You clicked phone manager!"
+            R.id.timeDate -> "You clicked Time/Date and Battery status!"
+            R.id.cameraCard -> "You clicked phone camera!"
+            else -> throw IllegalArgumentException("Undefined Clicked")
 
-    private class MyGestureListener:GestureDetector.SimpleOnGestureListener(){
-        override fun onSingleTapConfirmed(e: MotionEvent?): Boolean {
-            Log.d(SIMPLE_GESTURE,"Single tap confirmed")
-
-            return true
         }
+        Toast.makeText(this, text, Toast.LENGTH_SHORT).show()
+        speak(text)
 
-        override fun onDoubleTap(e: MotionEvent?): Boolean {
-            Log.d(SIMPLE_GESTURE,"DOUBLE tap confirmed")
-            return true
+    }
+
+    override fun onLongClick(view: View): Boolean {
+        val intent = when (view.id) {
+            R.id.msgBox -> Intent(this, MessageActivity::class.java)
+            R.id.phoneMngr -> Intent(this, PhoneActivity::class.java)
+            R.id.timeDate -> Intent(this, TimeDateActivity::class.java)
+            //R.id.cameraCard -> Intent(this, Camera::class.java)
+            else -> throw IllegalArgumentException("Undefined Clicked")
+        }
+        startActivity(intent)
+        return true
+    }
+
+    @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
+    private fun speak(text: String) {
+
+        tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, null)
+
+    }
+
+    override fun onInit(status: Int) {
+        if (status == TextToSpeech.SUCCESS) {
+            tts!!.language = Locale.US
+
         }
     }
 
-
-    /*msgBox.setOnClickListener{
-        val text = "You clicked messaging!"
-        val duration = Toast.LENGTH_SHORT
-        Toast.makeText(this, text, duration).show()
-
-
-    phoneMngr.setOnClickListener{
-        val text = "You clicked phone manager!"
-        val duration = Toast.LENGTH_SHORT
-        Toast.makeText(this, text, duration).show()
+    public override fun onDestroy() {
+        // Shutdown TTS
+        if (tts != null) {
+            tts!!.stop()
+            tts!!.shutdown()
+        }
+        super.onDestroy()
     }
-
-
-    timeDate.setOnClickListener{
-        val text = "You clicked time/date!"
-        val duration = Toast.LENGTH_SHORT
-        Toast.makeText(this, text, duration).show()
-    }
-
-
-    cameraCard.setOnClickListener{
-        val text = "You clicked camera!"
-        val duration = Toast.LENGTH_SHORT
-        Toast.makeText(this, text, duration).show()
-    }*/
-
-
-
-    }
-
+}
 
 
 
