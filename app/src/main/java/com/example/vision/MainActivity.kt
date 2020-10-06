@@ -30,7 +30,8 @@ class MainActivity : AppCompatActivity(), View.OnClickListener,
 
         tts = TextToSpeech(this, this)
 
-        val text = "Welcome to Vision.Single tap for details and long press to open activity."
+        val text = "Welcome to Vision.Single tap for details and long press to open an activity."
+
         speak(text)
 
         msgBox.setOnClickListener(this)
