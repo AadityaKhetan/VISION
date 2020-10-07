@@ -12,6 +12,7 @@ import android.widget.TextView
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import kotlinx.android.synthetic.main.datetime.*
+import java.text.SimpleDateFormat
 import java.util.*
 
 val TAG = "SPEECH"
@@ -33,6 +34,13 @@ class TimeDateActivity : AppCompatActivity(), View.OnClickListener, TextToSpeech
     override fun onClick(view: View) {
 
         if (view.id == R.id.batteryCard) {
+
+            val date = getCurrentDateTime()
+            val dateInString = date.toString("E,dd MMMM yyyy HH:mm:ss")
+            currDateTime.text = dateInString
+
+
+            tts?.speak(dateInString, TextToSpeech.QUEUE_FLUSH, null, null)
 
             val batteryStatus: Intent? =
                 IntentFilter(Intent.ACTION_BATTERY_CHANGED).let { ifilter ->
@@ -86,6 +94,15 @@ class TimeDateActivity : AppCompatActivity(), View.OnClickListener, TextToSpeech
             tts!!.language = Locale.US
 
         }
+    }
+
+    private fun Date.toString(format: String): String {
+        val formatter = SimpleDateFormat(format)
+        return formatter.format(this)
+    }
+
+    private fun getCurrentDateTime(): Date {
+        return Calendar.getInstance().time
     }
 
 }
