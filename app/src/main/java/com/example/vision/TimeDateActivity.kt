@@ -35,9 +35,10 @@ class TimeDateActivity : AppCompatActivity(), View.OnClickListener, TextToSpeech
 
         if (view.id == R.id.batteryCard) {
 
+            val currDate = findViewById<TextView>(R.id.currDateTime)
             val date = getCurrentDateTime()
             val dateInString = date.toString("E,dd MMMM yyyy HH:mm:ss")
-            currDateTime.text = dateInString
+            currDate.text = dateInString
 
 
             tts?.speak(dateInString, TextToSpeech.QUEUE_FLUSH, null, null)

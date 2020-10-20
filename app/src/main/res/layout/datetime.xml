@@ -23,7 +23,7 @@
             android:layout_centerHorizontal="true"
             android:layout_marginTop="100dp"
             android:layout_marginBottom="60dp"
-            android:text="Current Date and Time"
+            android:text="@string/current_date_and_time"
             android:textSize="20sp"
             android:textStyle="bold" />
 
@@ -42,7 +42,7 @@
             android:layout_alignParentBottom="true"
             android:layout_centerHorizontal="true"
             android:layout_marginBottom="50dp"
-            android:text="Battery Status"
+            android:text="@string/battery_status"
             android:textSize="20sp"
             android:textStyle="bold" />
 
@@ -55,7 +55,7 @@
             android:layout_centerHorizontal="true"
             android:layout_marginTop="60dp"
             android:layout_marginBottom="40dp"
-            android:text="Battery Percentage"
+            android:text="@string/battery_percentage"
             android:textSize="20sp"
             android:textStyle="bold" />
     </RelativeLayout>
