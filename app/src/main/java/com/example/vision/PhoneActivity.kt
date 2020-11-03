@@ -170,10 +170,10 @@ class PhoneActivity : AppCompatActivity(), View.OnClickListener,
 
     @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
     private fun startCall() {
-        val callIntent = Intent(Intent.ACTION_CALL)
-        callIntent.data = Uri.parse("tel:" + phoneNum.text)
         val text = "Calling " + phoneNum.text
         tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, null)
+        val callIntent = Intent(Intent.ACTION_CALL)
+        callIntent.data = Uri.parse("tel:" + phoneNum.text)
         startActivity(callIntent)
     }
 
