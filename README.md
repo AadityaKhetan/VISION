@@ -4,7 +4,7 @@ This android app made using kotlin is for visually impaired people so that they 
 
 •	Reading inbox messages and writing new messages.
 •	Making phone calls and checking logs.
-•	Checking battery level with prompt for low battery.
+•	Checking battery level.
 •	Identification of Indian currency with the help of camera access.(Deep Learning)
 •	Currency Detection model is a Convolutional Nueral Network model made with Tensorflow and Keras.
 •	It will be deployed using TensorFlow lite. 
