@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.res.AssetManager
 import android.graphics.Bitmap
 import android.os.SystemClock
+import android.util.Log
 import com.google.android.gms.tasks.Task
 import com.google.android.gms.tasks.Tasks.call
 import org.tensorflow.lite.Interpreter
@@ -47,19 +48,8 @@ class TFLiteClassifier(private val context: Context) {
     }
 
     @Throws(IOException::class)
-    fun loadLines(context: Context, filename: String): ArrayList<String> {
-        val s = Scanner(InputStreamReader(context.assets.open(filename)))
-        val labels = ArrayList<String>()
-        while (s.hasNextLine()) {
-            labels.add(s.nextLine())
-        }
-        s.close()
-        return labels
-    }
-    //var labelss = loadLines(context, "labels.txt")
-
-    @Throws(IOException::class)
     private fun initializeInterpreter() {
+
 
         val assetManager = context.assets
         val model = loadModelFile(assetManager, "converted_model.tflite")
@@ -80,13 +70,39 @@ class TFLiteClassifier(private val context: Context) {
         isInitialized = true
     }
 
-    companion object {
-        private const val TAG = "TfliteClassifier"
-        private const val FLOAT_TYPE_SIZE = 4
-        private const val CHANNEL_SIZE = 3
-        private const val IMAGE_MEAN = 127.5f
-        private const val IMAGE_STD = 127.5f
+    @Throws(IOException::class)
+    private fun loadModelFile(assetManager: AssetManager, filename: String): ByteBuffer {
+        val fileDescriptor = assetManager.openFd(filename)
+        val inputStream = FileInputStream(fileDescriptor.fileDescriptor)
+        val fileChannel = inputStream.channel
+        val startOffset = fileDescriptor.startOffset
+        val declaredLength = fileDescriptor.declaredLength
+        return fileChannel.map(FileChannel.MapMode.READ_ONLY, startOffset, declaredLength)
     }
+
+    @Throws(IOException::class)
+    fun loadLines(context: Context, filename: String): ArrayList<String> {
+        val s = Scanner(InputStreamReader(context.assets.open(filename)))
+        val labels = ArrayList<String>()
+        while (s.hasNextLine()) {
+            labels.add(s.nextLine())
+        }
+        s.close()
+        return labels
+    }
+
+    private fun getMaxResult(result: FloatArray): Int {
+        var probability = result[0]
+        var index = 0
+        for (i in result.indices) {
+            if (probability < result[i]) {
+                probability = result[i]
+                index = i
+            }
+        }
+        return index
+    }
+
 
     private fun classify(bitmap: Bitmap): String {
 
@@ -101,11 +117,31 @@ class TFLiteClassifier(private val context: Context) {
         interpreter?.run(byteBuffer, output)
         val endTime = SystemClock.uptimeMillis()
 
-        var inferenceTime = endTime - startTime
+
         var index = getMaxResult(output[0])
-        var result = "Prediction is ${labels[index]}\nInference Time $inferenceTime ms"
+        var result = "Prediction is ${labels[index]}"
 
         return result
+    }
+
+    fun classifyAsync(bitmap: Bitmap): Task<String> {
+        return call(executorService, Callable<String> { classify(bitmap) })
+    }
+
+    fun close() {
+        call(
+            executorService,
+            Callable<String> {
+                interpreter?.close()
+                if (gpuDelegate != null) {
+                    gpuDelegate!!.close()
+                    gpuDelegate = null
+                }
+
+                Log.d(TAG, "Closed TFLite interpreter.")
+                null
+            }
+        )
     }
 
     private fun convertBitmapToByteBuffer(bitmap: Bitmap): ByteBuffer {
@@ -130,30 +166,11 @@ class TFLiteClassifier(private val context: Context) {
         return byteBuffer
     }
 
-
-    fun classifyAsync(bitmap: Bitmap): Task<String> {
-        return call(executorService, Callable<String> { classify(bitmap) })
-    }
-
-    @Throws(IOException::class)
-    private fun loadModelFile(assetManager: AssetManager, filename: String): ByteBuffer {
-        val fileDescriptor = assetManager.openFd(filename)
-        val inputStream = FileInputStream(fileDescriptor.fileDescriptor)
-        val fileChannel = inputStream.channel
-        val startOffset = fileDescriptor.startOffset
-        val declaredLength = fileDescriptor.declaredLength
-        return fileChannel.map(FileChannel.MapMode.READ_ONLY, startOffset, declaredLength)
-    }
-
-    private fun getMaxResult(result: FloatArray): Int {
-        var probability = result[0]
-        var index = 0
-        for (i in result.indices) {
-            if (probability < result[i]) {
-                probability = result[i]
-                index = i
-            }
-        }
-        return index
+    companion object {
+        private const val TAG = "TfliteClassifier"
+        private const val FLOAT_TYPE_SIZE = 4
+        private const val CHANNEL_SIZE = 3
+        private const val IMAGE_MEAN = 127.5f
+        private const val IMAGE_STD = 127.5f
     }
 }

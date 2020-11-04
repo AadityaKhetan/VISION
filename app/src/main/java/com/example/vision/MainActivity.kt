@@ -68,6 +68,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener,
             R.id.msgBox -> Intent(this, MessageActivity::class.java)
             R.id.phoneMngr -> Intent(this, PhoneActivity::class.java)
             R.id.timeDate -> Intent(this, TimeDateActivity::class.java)
+            R.id.cameraCard -> Intent(this, CameraActivity::class.java)
             //R.id.cameraCard -> Intent(this, Camera::class.java)
             else -> throw IllegalArgumentException("Undefined Clicked")
         }

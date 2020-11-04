@@ -6,6 +6,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.HandlerThread
+import android.speech.tts.TextToSpeech
 import android.util.DisplayMetrics
 import android.util.Log
 import android.util.Rational
@@ -19,16 +20,23 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import kotlinx.android.synthetic.main.camera_activity.*
 import java.io.ByteArrayOutputStream
+import java.util.*
 
-class CameraActivity : AppCompatActivity() {
+class CameraActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
+
+    private var lensFacing = CameraX.LensFacing.BACK
+    private val TAG = "CameraActivity"
 
     private val REQUEST_CODE_PERMISSIONS = 101
     private val REQUIRED_PERMISSIONS = arrayOf("android.permission.CAMERA")
 
+    private var tfLiteClassifier: TFLiteClassifier = TFLiteClassifier(this@CameraActivity)
+    private var tts: TextToSpeech? = null
+
     @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+        setContentView(R.layout.camera_activity)
 
         if (allPermissionsGranted()) {
             textureView.post { startCamera() }
@@ -39,14 +47,100 @@ class CameraActivity : AppCompatActivity() {
             ActivityCompat.requestPermissions(this, REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS);
         }
 
-        var tfLiteClassifier: TFLiteClassifier = TFLiteClassifier(this@CameraActivity)
         tfLiteClassifier
             .initialize()
             .addOnSuccessListener { }
             .addOnFailureListener { e -> Log.e(TAG, "Error in setting up the classifier.", e) }
     }
 
-    @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
+    private fun startCamera() {
+        val metrics = DisplayMetrics().also { textureView.display.getRealMetrics(it) }
+        val screenSize = Size(metrics.widthPixels, metrics.heightPixels)
+        val screenAspectRatio = Rational(1, 1)
+
+        val previewConfig = PreviewConfig.Builder().apply {
+            setLensFacing(lensFacing)
+            setTargetResolution(screenSize)
+            setTargetAspectRatio(screenAspectRatio)
+            setTargetRotation(windowManager.defaultDisplay.rotation)
+            setTargetRotation(textureView.display.rotation)
+        }.build()
+
+        val preview = Preview(previewConfig)
+        preview.setOnPreviewOutputUpdateListener {
+            //textureView.surfaceTexture = it.surfaceTexture
+            textureView.setSurfaceTexture(it.surfaceTexture)
+            updateTransform()
+        }
+
+
+        val analyzerConfig = ImageAnalysisConfig.Builder().apply {
+            // Use a worker thread for image analysis to prevent glitches
+            val analyzerThread = HandlerThread("AnalysisThread").apply {
+                start()
+            }
+            setCallbackHandler(Handler(analyzerThread.looper))
+            setImageReaderMode(ImageAnalysis.ImageReaderMode.ACQUIRE_LATEST_IMAGE)
+        }.build()
+
+
+        val analyzerUseCase = ImageAnalysis(analyzerConfig)
+        analyzerUseCase.analyzer =
+            ImageAnalysis.Analyzer { image: ImageProxy, rotationDegrees: Int ->
+
+                val bitmap = image.toBitmap()
+
+                tfLiteClassifier
+                    .classifyAsync(bitmap)
+                    .addOnSuccessListener { resultText ->
+                        predictedTextView?.text = resultText
+                        tts?.speak(predictedTextView.text, TextToSpeech.QUEUE_FLUSH, null, null)
+                        //Thread.sleep(5000)
+                    }
+                    .addOnFailureListener { error -> }
+
+            }
+        CameraX.bindToLifecycle(this, preview, analyzerUseCase)
+    }
+
+    fun ImageProxy.toBitmap(): Bitmap {
+        val yBuffer = planes[0].buffer // Y
+        val uBuffer = planes[1].buffer // U
+        val vBuffer = planes[2].buffer // V
+
+        val ySize = yBuffer.remaining()
+        val uSize = uBuffer.remaining()
+        val vSize = vBuffer.remaining()
+
+        val nv21 = ByteArray(ySize + uSize + vSize)
+
+        yBuffer.get(nv21, 0, ySize)
+        vBuffer.get(nv21, ySize, vSize)
+        uBuffer.get(nv21, ySize + vSize, uSize)
+
+        val yuvImage = YuvImage(nv21, ImageFormat.NV21, this.width, this.height, null)
+        val out = ByteArrayOutputStream()
+        yuvImage.compressToJpeg(Rect(0, 0, yuvImage.width, yuvImage.height), 100, out)
+        val imageBytes = out.toByteArray()
+        return BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+    }
+
+    private fun updateTransform() {
+        val matrix = Matrix()
+        val centerX = textureView.width / 2f
+        val centerY = textureView.height / 2f
+
+        val rotationDegrees = when (textureView.display.rotation) {
+            Surface.ROTATION_0 -> 0
+            Surface.ROTATION_90 -> 90
+            Surface.ROTATION_180 -> 180
+            Surface.ROTATION_270 -> 270
+            else -> return
+        }
+        matrix.postRotate(-rotationDegrees.toFloat(), centerX, centerY)
+        textureView.setTransform(matrix)
+    }
+
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<String>,
@@ -78,88 +172,23 @@ class CameraActivity : AppCompatActivity() {
         return true
     }
 
-    private var lensFacing = CameraX.LensFacing.BACK
 
-    @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
-    private fun startCamera() {
-        var metrics = DisplayMetrics().also { textureView.display.getRealMetrics(it) }
-        var screenSize = Size(metrics.widthPixels, metrics.heightPixels)
-        var screenAspectRatio = Rational(1, 1)
-
-        var previewConfig = PreviewConfig.Builder().apply {
-            setLensFacing(lensFacing)
-            setTargetResolution(screenSize)
-            setTargetAspectRatio(screenAspectRatio)
-            setTargetRotation(windowManager.defaultDisplay.rotation)
-            setTargetRotation(textureView.display.rotation)
-        }.build()
-
-        var preview = Preview(previewConfig)
-        preview.setOnPreviewOutputUpdateListener {
-            //textureView.surfaceTexture = it.surfaceTexture
-            updateTransform()
+    public override fun onDestroy() {
+        tfLiteClassifier.close()
+        // Shutdown TTS
+        if (tts != null) {
+            tts!!.stop()
+            tts!!.shutdown()
         }
-
-
-        val analyzerConfig = ImageAnalysisConfig.Builder().apply {
-            // Use a worker thread for image analysis to prevent glitches
-            val analyzerThread = HandlerThread("AnalysisThread").apply {
-                start()
-            }
-            setCallbackHandler(Handler(analyzerThread.looper))
-            setImageReaderMode(ImageAnalysis.ImageReaderMode.ACQUIRE_LATEST_IMAGE)
-        }.build()
-
-
-        val analyzerUseCase = ImageAnalysis(analyzerConfig)
-        analyzerUseCase.analyzer =
-            ImageAnalysis.Analyzer { image: ImageProxy, rotationDegrees: Int ->
-
-                val bitmap = image.toBitmap()
-
-                TFLiteClassifier.classifyAsync(bitmap)
-                    .addOnSuccessListener { resultText -> predictedTextView?.text = resultText }
-                    .addOnFailureListener { error -> }
-
-            }
-        CameraX.bindToLifecycle(this, preview, analyzerUseCase)
+        super.onDestroy()
     }
 
-    private fun updateTransform() {
-        val matrix = Matrix()
-        val centerX = textureView.width / 2f
-        val centerY = textureView.height / 2f
+    override fun onInit(p0: Int) {
+        Log.d(com.example.vision.TAG, "Initializing TTS")
+        if (p0 == TextToSpeech.SUCCESS) {
+            Log.d(com.example.vision.TAG, "SUCCESS")
+            tts!!.language = Locale.US
 
-        val rotationDegrees = when (textureView.display.rotation) {
-            Surface.ROTATION_0 -> 0
-            Surface.ROTATION_90 -> 90
-            Surface.ROTATION_180 -> 180
-            Surface.ROTATION_270 -> 270
-            else -> return
         }
-        matrix.postRotate(-rotationDegrees.toFloat(), centerX, centerY)
-        textureView.setTransform(matrix)
-    }
-
-    fun ImageProxy.toBitmap(): Bitmap {
-        val yBuffer = planes[0].buffer // Y
-        val uBuffer = planes[1].buffer // U
-        val vBuffer = planes[2].buffer // V
-
-        val ySize = yBuffer.remaining()
-        val uSize = uBuffer.remaining()
-        val vSize = vBuffer.remaining()
-
-        val nv21 = ByteArray(ySize + uSize + vSize)
-
-        yBuffer.get(nv21, 0, ySize)
-        vBuffer.get(nv21, ySize, vSize)
-        uBuffer.get(nv21, ySize + vSize, uSize)
-
-        val yuvImage = YuvImage(nv21, ImageFormat.NV21, this.width, this.height, null)
-        val out = ByteArrayOutputStream()
-        yuvImage.compressToJpeg(Rect(0, 0, yuvImage.width, yuvImage.height), 100, out)
-        val imageBytes = out.toByteArray()
-        return BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
     }
 }
