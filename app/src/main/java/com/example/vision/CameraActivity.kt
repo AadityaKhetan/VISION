@@ -12,6 +12,7 @@ import android.util.Log
 import android.util.Rational
 import android.util.Size
 import android.view.Surface
+import android.view.ViewGroup
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
@@ -60,13 +61,13 @@ class CameraActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
 
     private fun startCamera() {
-        val metrics = DisplayMetrics().also { textureView.display.getRealMetrics(it) }
-        val screenSize = Size(metrics.widthPixels, metrics.heightPixels)
+        //val metrics = DisplayMetrics().also { textureView.display.getRealMetrics(it) }
+        //val screenSize = Size(metrics.widthPixels, metrics.heightPixels)
         val screenAspectRatio = Rational(1, 1)
 
         val previewConfig = PreviewConfig.Builder().apply {
             setLensFacing(lensFacing)
-            setTargetResolution(screenSize)
+            setTargetResolution(Size(256, 256))
             setTargetAspectRatio(screenAspectRatio)
             setTargetRotation(windowManager.defaultDisplay.rotation)
             setTargetRotation(textureView.display.rotation)
@@ -74,8 +75,10 @@ class CameraActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
 
         val preview = Preview(previewConfig)
         preview.setOnPreviewOutputUpdateListener {
-            //textureView.surfaceTexture = it.surfaceTexture
+            val parent = textureView.parent as ViewGroup
+            parent.removeView(textureView)
             textureView.setSurfaceTexture(it.surfaceTexture)
+            parent.addView(textureView, 0)
             updateTransform()
         }
 

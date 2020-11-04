@@ -59,7 +59,7 @@
                     android:layout_alignParentBottom="true"
                     android:layout_centerHorizontal="true"
                     android:layout_marginBottom="50dp"
-                    android:text="Messaging"
+                    android:text="Message Inbox"
                     android:textSize="20sp"
                     android:textStyle="bold" />
             </RelativeLayout>
@@ -123,7 +123,7 @@
                     android:layout_alignParentBottom="true"
                     android:layout_centerHorizontal="true"
                     android:layout_marginBottom="50dp"
-                    android:text="Time/Date"
+                    android:text="Battery Status"
                     android:textSize="20sp"
                     android:textStyle="bold" />
             </RelativeLayout>
@@ -155,7 +155,8 @@
                     android:layout_alignParentBottom="true"
                     android:layout_centerHorizontal="true"
                     android:layout_marginBottom="50dp"
-                    android:text="Camera"
+                    android:text="Currency Recognition"
+                    android:gravity="center_horizontal"
                     android:textSize="20sp"
                     android:textStyle="bold" />
             </RelativeLayout>
