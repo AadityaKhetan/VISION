@@ -90,17 +90,17 @@ class MessageActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     }
 
     private fun speakPhone() {
-        val msgIntent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
-        msgIntent.putExtra(
+        val phnIntent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+        phnIntent.putExtra(
             RecognizerIntent.EXTRA_LANGUAGE_MODEL,
             RecognizerIntent.LANGUAGE_MODEL_FREE_FORM
         )
-        msgIntent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
-        msgIntent.putExtra(RecognizerIntent.EXTRA_PROMPT, "Hi speak something")
+        phnIntent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
+        phnIntent.putExtra(RecognizerIntent.EXTRA_PROMPT, "Hi speak something")
         try {
-            startActivityForResult(msgIntent, 102)
+            startActivityForResult(phnIntent, 102)
         } catch (e: Exception) {
-            e.message?.let { Log.e("MSG", it) }
+            e.message?.let { Log.e("Phone", it) }
         }
     }
 
@@ -155,7 +155,10 @@ class MessageActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         if (p0 == TextToSpeech.SUCCESS) {
             Log.d(TAG, "SUCCESS")
             tts!!.language = Locale.US
-
+            tts?.speak(
+                "Messaging box opened.",
+                TextToSpeech.QUEUE_FLUSH, null, null
+            )
         }
     }
 }

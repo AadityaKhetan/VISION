@@ -39,10 +39,8 @@ class TimeDateActivity : AppCompatActivity(), View.OnClickListener, TextToSpeech
             val date = getCurrentDateTime()
             val dateInString = date.toString("E,dd MMMM yyyy HH:mm:ss")
             currDate.text = dateInString
-
-
             tts?.speak(dateInString, TextToSpeech.QUEUE_FLUSH, null, null)
-
+            Thread.sleep(6000)
             val batteryStatus: Intent? =
                 IntentFilter(Intent.ACTION_BATTERY_CHANGED).let { ifilter ->
                     this.registerReceiver(null, ifilter)
@@ -93,7 +91,10 @@ class TimeDateActivity : AppCompatActivity(), View.OnClickListener, TextToSpeech
         if (p0 == TextToSpeech.SUCCESS) {
             Log.d(TAG, "SUCCESS")
             tts!!.language = Locale.US
-
+            tts?.speak(
+                "Time,date and battery status opened.",
+                TextToSpeech.QUEUE_FLUSH, null, null
+            )
         }
     }
 

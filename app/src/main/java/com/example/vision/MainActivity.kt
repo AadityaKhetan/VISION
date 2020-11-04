@@ -31,9 +31,9 @@ class MainActivity : AppCompatActivity(), View.OnClickListener,
 
         tts = TextToSpeech(this, this)
 
-        val text = "Welcome to Vision.Single tap for details and long press to open an activity."
+        //val text = "Welcome to Vision.Single tap for details and long press to open an activity."
 
-        speak(text)
+        //speak(text)
 
         msgBox.setOnClickListener(this)
         phoneMngr.setOnClickListener(this)
@@ -86,7 +86,10 @@ class MainActivity : AppCompatActivity(), View.OnClickListener,
     override fun onInit(status: Int) {
         if (status == TextToSpeech.SUCCESS) {
             tts!!.language = Locale.US
-
+            tts?.speak(
+                "Welcome to Vision.Single tap for details and long press to open an activity.",
+                TextToSpeech.QUEUE_FLUSH, null, null
+            )
         }
     }
 

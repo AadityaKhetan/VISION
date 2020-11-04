@@ -1,18 +1,23 @@
 package com.example.vision
 
 import android.Manifest
+import android.app.Activity
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.speech.RecognizerIntent
 import android.speech.tts.TextToSpeech
+import android.util.Log
 import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
+import kotlinx.android.synthetic.main.messaging.*
+import kotlinx.android.synthetic.main.phonemanager.*
 import java.util.*
 
 
@@ -31,6 +36,17 @@ class PhoneActivity : AppCompatActivity(), View.OnClickListener,
         phoneNum = findViewById(R.id.editTextPhone2)
 
         tts = TextToSpeech(this, this)
+
+        imageView2.setOnClickListener {
+            tts?.speak(
+                "Please speak recipient's phone number",
+                TextToSpeech.QUEUE_FLUSH,
+                null,
+                null
+            )
+            Thread.sleep(2000)
+            speakPhone()
+        }
 
         val btn1: Button = findViewById(R.id.btn1)
         val btn2: Button = findViewById(R.id.btn2)
@@ -80,6 +96,8 @@ class PhoneActivity : AppCompatActivity(), View.OnClickListener,
                     111
                 )
             } else {
+                speak("calling " + editTextPhone2.text.toString())
+                Thread.sleep(5000)
                 startCall()
             }
             true
@@ -148,7 +166,10 @@ class PhoneActivity : AppCompatActivity(), View.OnClickListener,
     override fun onInit(status: Int) {
         if (status == TextToSpeech.SUCCESS) {
             tts!!.language = Locale.US
-
+            tts?.speak(
+                "Phone manager opened.",
+                TextToSpeech.QUEUE_FLUSH, null, null
+            )
         }
     }
 
@@ -170,8 +191,6 @@ class PhoneActivity : AppCompatActivity(), View.OnClickListener,
 
     @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
     private fun startCall() {
-        val text = "Calling " + phoneNum.text
-        tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, null)
         val callIntent = Intent(Intent.ACTION_CALL)
         callIntent.data = Uri.parse("tel:" + phoneNum.text)
         startActivity(callIntent)
@@ -185,5 +204,30 @@ class PhoneActivity : AppCompatActivity(), View.OnClickListener,
     ) {
         if (requestCode == 111)
             startCall()
+    }
+
+    private fun speakPhone() {
+        val phnIntent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+        phnIntent.putExtra(
+            RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+            RecognizerIntent.LANGUAGE_MODEL_FREE_FORM
+        )
+        phnIntent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
+        phnIntent.putExtra(RecognizerIntent.EXTRA_PROMPT, "Hi speak something")
+        try {
+            startActivityForResult(phnIntent, 102)
+        } catch (e: Exception) {
+            e.message?.let { Log.e("Phone", it) }
+        }
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == 102) {
+            if (resultCode == Activity.RESULT_OK && null != data) {
+                val result = data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
+                editTextPhone2.setText(result?.get(0))
+            }
+        }
     }
 }

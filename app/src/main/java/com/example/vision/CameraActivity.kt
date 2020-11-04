@@ -37,6 +37,7 @@ class CameraActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.camera_activity)
+        tts = TextToSpeech(this, this)
 
         if (allPermissionsGranted()) {
             textureView.post { startCamera() }
@@ -45,6 +46,11 @@ class CameraActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
             }
         } else {
             ActivityCompat.requestPermissions(this, REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS);
+        }
+
+        textureView.setOnClickListener {
+            //tts?.speak("Hello ",TextToSpeech.QUEUE_FLUSH,null,null)
+            tts?.speak(predictedTextView.text, TextToSpeech.QUEUE_FLUSH, null, null)
         }
 
         tfLiteClassifier
@@ -94,8 +100,6 @@ class CameraActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
                     .classifyAsync(bitmap)
                     .addOnSuccessListener { resultText ->
                         predictedTextView?.text = resultText
-                        tts?.speak(predictedTextView.text, TextToSpeech.QUEUE_FLUSH, null, null)
-                        //Thread.sleep(5000)
                     }
                     .addOnFailureListener { error -> }
 
@@ -188,7 +192,10 @@ class CameraActivity : AppCompatActivity(), TextToSpeech.OnInitListener {
         if (p0 == TextToSpeech.SUCCESS) {
             Log.d(com.example.vision.TAG, "SUCCESS")
             tts!!.language = Locale.US
-
+            tts?.speak(
+                "Currency Recognizer opened.",
+                TextToSpeech.QUEUE_FLUSH, null, null
+            )
         }
     }
 }
